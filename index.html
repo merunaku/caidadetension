@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora Didáctica de Caída de Tensión</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="container header-content">
+      <div>
+        <h1>Calculadora Didáctica de Caída de Tensión</h1>
+        <p>Configura los parámetros del circuito y obtén el enunciado, las fórmulas y la resolución paso a paso.</p>
+      </div>
+      <button type="button" id="btnPrint" class="btn btn-outline" title="Imprimir o guardar ejercicio como PDF">
+        Imprimir / PDF
+      </button>
+    </div>
+  </header>
+
+  <main class="container main-layout">
+    <!-- PANEL DE CONFIGURACIÓN -->
+    <aside class="card config-panel">
+      <div class="card-header">
+        <h2>1. Configuración del Ejercicio</h2>
+      </div>
+
+      <!-- Ejemplos rápidos -->
+      <div class="presets-box">
+        <span class="presets-label">Cargar ejemplo rápido:</span>
+        <div class="presets-grid">
+          <button type="button" class="btn-chip" data-preset="ex1">Ej. 1: Monofásico (P y γ)</button>
+          <button type="button" class="btn-chip" data-preset="ex2">Ej. 2: Sección mínima</button>
+          <button type="button" class="btn-chip" data-preset="ex3">Ej. 3: Aluminio (I y ρ)</button>
+          <button type="button" class="btn-chip" data-preset="ex4">Ej. 4: Trifásico (kW)</button>
+        </div>
+      </div>
+
+      <form id="calcForm" class="form-stack">
+        <!-- Qué calcular -->
+        <div class="form-group">
+          <label for="calcMode">¿Qué deseas calcular?</label>
+          <select id="calcMode">
+            <option value="drop">Caída de tensión (ΔV y ΔV%) dada una sección</option>
+            <option value="section">Sección mínima de conductor (S<sub>mín</sub>) según límite %</option>
+          </select>
+        </div>
+
+        <!-- Tipo de sistema -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="systemType">Tipo de circuito</label>
+            <select id="systemType">
+              <option value="mono">Monofásico CA (2 · L)</option>
+              <option value="tri">Trifásico CA (√3 · L)</option>
+              <option value="dc">Corriente Continua CC (2 · L)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="loadMode">Dato de carga</label>
+            <select id="loadMode">
+              <option value="current_only">Solo Corriente (sin cos φ)</option>
+              <option value="current_cos">Corriente + cos φ</option>
+              <option value="power" selected>Potencia + cos φ</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Tensión y Longitud -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="voltageInput">Tensión nominal V (V)</label>
+            <input type="number" id="voltageInput" value="220" min="1" step="any" required />
+            <div class="quick-pills">
+              <button type="button" class="pill" data-v="12">12V</button>
+              <button type="button" class="pill" data-v="24">24V</button>
+              <button type="button" class="pill" data-v="220">220V</button>
+              <button type="button" class="pill" data-v="380">380V</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="lengthInput">Longitud tramo L (m)</label>
+            <input type="number" id="lengthInput" value="35" min="0.1" step="any" required />
+          </div>
+        </div>
+
+        <!-- Datos de Carga dinámicos -->
+        <div class="form-row">
+          <div class="form-group hidden" id="groupCurrent">
+            <label for="currentInput">Corriente nominal I (A)</label>
+            <input type="number" id="currentInput" value="32" min="0.01" step="any" />
+          </div>
+
+          <div class="form-group" id="groupPower">
+            <label for="powerInput">Potencia activa (P)</label>
+            <div class="input-with-unit">
+              <input type="number" id="powerInput" value="4.4" min="0.01" step="any" />
+              <select id="powerUnit">
+                <option value="kW" selected>kW</option>
+                <option value="W">W</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group" id="groupCosphi">
+            <label for="cosphiInput">Factor de potencia (cos φ)</label>
+            <input type="number" id="cosphiInput" value="0.9" min="0.1" max="1" step="0.01" />
+          </div>
+        </div>
+
+        <!-- Material y parámetro -->
+        <div class="divider"><span>Material del Conductor</span></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="materialPreset">Material y temperatura</label>
+            <select id="materialPreset">
+              <option value="cu20" selected>Cobre a 20 °C (Estándar)</option>
+              <option value="cu70">Cobre a 70 °C (Servicio PVC)</option>
+              <option value="cu90">Cobre a 90 °C (Servicio XLPE)</option>
+              <option value="al20">Aluminio a 20 °C (Estándar)</option>
+              <option value="al70">Aluminio a 70 °C (Servicio PVC)</option>
+              <option value="custom">Personalizado</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="propMode">Usar en fórmula</label>
+            <select id="propMode">
+              <option value="gamma" selected>Conductividad (γ)</option>
+              <option value="rho">Resistividad (ρ)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="gammaInput">Conductividad γ [m/(Ω·mm²)]</label>
+            <input type="number" id="gammaInput" value="56" min="0.1" step="any" required />
+          </div>
+
+          <div class="form-group">
+            <label for="rhoInput">Resistividad ρ [Ω·mm²/m]</label>
+            <input type="number" id="rhoInput" value="0.01786" min="0.0001" step="any" required />
+          </div>
+        </div>
+
+        <!-- Sección y Límite -->
+        <div class="divider"><span>Dimensionamiento y Norma</span></div>
+
+        <div class="form-row">
+          <div class="form-group" id="groupSection">
+            <label for="sectionSelect">Sección conductor S (mm²)</label>
+            <select id="sectionSelect">
+              <option value="1.5">1,5 mm²</option>
+              <option value="2.5">2,5 mm²</option>
+              <option value="4" selected>4 mm²</option>
+              <option value="6">6 mm²</option>
+              <option value="10">10 mm²</option>
+              <option value="16">16 mm²</option>
+              <option value="25">25 mm²</option>
+              <option value="35">35 mm²</option>
+              <option value="50">50 mm²</option>
+              <option value="70">70 mm²</option>
+              <option value="95">95 mm²</option>
+              <option value="120">120 mm²</option>
+              <option value="150">150 mm²</option>
+              <option value="185">185 mm²</option>
+              <option value="240">240 mm²</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="maxDropInput">Límite máximo ΔV (%)</label>
+            <input type="number" id="maxDropInput" value="3" min="0.1" max="20" step="0.1" required />
+            <div class="quick-pills">
+              <button type="button" class="pill" data-dv="1.5">1,5%</button>
+              <button type="button" class="pill" data-dv="3">3% (Deriv.)</button>
+              <button type="button" class="pill" data-dv="5">5% (Fuerza)</button>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="btnCalculate" class="btn btn-primary">
+          Calcular y Desarrollar Ejercicio
+        </button>
+      </form>
+    </aside>
+
+    <!-- PANEL DE DESARROLLO COMPLETO -->
+    <section class="results-column">
+      <article class="card solution-card">
+        <div class="card-header">
+          <h2>2. Enunciado y Resolución Paso a Paso</h2>
+        </div>
+
+        <div id="errorBanner" class="alert alert-error hidden"></div>
+
+        <!-- Enunciado generado -->
+        <div class="statement-box">
+          <h3>Enunciado del problema</h3>
+          <p id="problemStatement"></p>
+        </div>
+
+        <!-- Datos extraídos -->
+        <div class="data-summary">
+          <h3>Datos del circuito</h3>
+          <ul id="dataList" class="data-tags"></ul>
+        </div>
+
+        <!-- Pasos matemáticos -->
+        <div id="stepsContainer" class="steps-wrapper"></div>
+
+        <!-- Veredicto final -->
+        <div id="verdictBanner" class="verdict-box"></div>
+      </article>
+
+      <!-- TABLAS DE REFERENCIA -->
+      <article class="card tables-card">
+        <div class="card-header">
+          <h2>3. Tablas de Referencia Técnica</h2>
+        </div>
+
+        <div class="table-section">
+          <h3>Tabla A: Resistividad (ρ) y Conductividad (γ) de Conductores</h3>
+          <p class="table-note">Haz clic en <strong>"Aplicar"</strong> para cargar el material directamente en la calculadora.</p>
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Material</th>
+                  <th>Temp.</th>
+                  <th>Resistividad ρ (Ω·mm²/m)</th>
+                  <th>Conductividad γ [m/(Ω·mm²)]</th>
+                  <th>Aplicación habitual</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="materialsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="tables-two-col">
+          <div class="table-section">
+            <h3>Tabla B: Secciones Comerciales (mm² / AWG)</h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sección (mm²)</th>
+                    <th>Equiv. AWG aprox.</th>
+                    <th>Uso típico</th>
+                  </tr>
+                </thead>
+                <tbody id="sectionsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="table-section">
+            <h3>Tabla C: Límites Normativos de Caída de Tensión</h3>
+            <div class="table-responsive">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tipo de instalación</th>
+                    <th>ΔV% máx.</th>
+                    <th>Observación</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Alumbrado y enchufes (derivados)</td>
+                    <td><strong>3,0 %</strong></td>
+                    <td>Desde tablero general a carga</td>
+                  </tr>
+                  <tr>
+                    <td>Fuerza motriz / Industrial</td>
+                    <td><strong>3,0 % – 5,0 %</strong></td>
+                    <td>Según tramo alimentador + derivado</td>
+                  </tr>
+                  <tr>
+                    <td>Alimentador principal</td>
+                    <td><strong>2,0 % – 3,0 %</strong></td>
+                    <td>Tramo entre empalme y subtablero</td>
+                  </tr>
+                  <tr>
+                    <td>Corriente Continua / Fotovoltaica</td>
+                    <td><strong>1,5 % – 3,0 %</strong></td>
+                    <td>Tramo paneles a regulador/inversor</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
