@@ -3,32 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calculadora Eléctrica RIC — Plataforma Profe Diego</title>
+  <title>Caída de Tensión y Sección RIC - ProfeDiego</title>
+
+  <!-- Fuentes y CSS Global centralizado en GitHub Pages -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://merunaku.github.io/home/styles.css" />
   <link rel="stylesheet" href="calculadora.css" />
 </head>
 <body>
-  <!-- ENCABEZADO INSTITUCIONAL -->
-  <header>
-    <div class="calc-header-container header-flex">
-      <div class="brand-layout">
-        <span class="brand-badge">⚡</span>
-        <span>PROFE DIEGO</span>
-      </div>
-      <div class="title-layout">
-        <h1>Calculadora de Caída de Tensión y Sección</h1>
-        <p>Normativa Eléctrica Chilena SEC • Pliegos RIC N°03 y RIC N°04</p>
-      </div>
-    </div>
-  </header>
+
+  <!-- CABECERA GLOBAL DINÁMICA (Se alimenta de config.js + header.js) -->
+  <div id="global-header"></div>
+
+  <!-- CONFIGURACIÓN Y NAVEGACIÓN GLOBAL (Colores dinámicos desde Google Sheets) -->
+  <script src="https://merunaku.github.io/home/config.js"></script>
+  <script src="https://merunaku.github.io/home/header.js"></script>
 
   <main class="calc-main-container">
     <!-- Barra superior de navegación y acciones -->
     <div class="top-toolbar">
-      <a href="index.html" class="btn-home" style="margin-top: 0;">← Volver al Inicio</a>
+      <a href="https://merunaku.github.io/home/index.html" class="btn-home" style="margin-top: 0;">
+        🗂️ Volver al Portal General
+      </a>
       <div class="toolbar-actions">
         <button type="button" id="btnReset" class="btn-tool">↺ Reiniciar</button>
         <button type="button" id="btnPrint" class="btn-tool btn-tool-gold">🖨️ Imprimir / PDF</button>

@@ -66,7 +66,7 @@ const RIC_SECTIONS_TABLE_4_1 = [
 ];
 
 // ==========================================
-// REGLA DE REDONDEO SOLICITADA:
+// REGLA DE REDONDEO:
 // - Si es entero: sin decimales
 // - Si tiene decimales: máximo 3 (4to decimal >= 5 sube el 3ro)
 // ==========================================
@@ -74,7 +74,6 @@ function roundHalfUp(num, maxDecimals = 3) {
   if (!isFinite(num)) return NaN;
   const factor = Math.pow(10, maxDecimals);
   const sign = num < 0 ? -1 : 1;
-  // Evita imprecisión binaria en IEEE 754 (ej. 1.005 * 1000)
   const scaled = Math.abs(num) * factor;
   const rounded = sign * Math.round(scaled + 1e-11) / factor;
   return Object.is(rounded, -0) ? 0 : rounded;
@@ -83,7 +82,6 @@ function roundHalfUp(num, maxDecimals = 3) {
 function fmt(num, maxDecimals = 3) {
   if (!isFinite(num)) return "—";
   const rounded = roundHalfUp(num, maxDecimals);
-  // Number.toString() omite decimales si es entero y elimina ceros finales
   return rounded.toString().replace(".", ",");
 }
 
