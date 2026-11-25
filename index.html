@@ -3,352 +3,361 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Calculadora Eléctrica RIC Chile — Caída de Tensión y Sección</title>
+  <title>Calculadora Eléctrica RIC — Plataforma Profe Diego</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="calculadora.css" />
 </head>
 <body>
-  <header class="app-header">
-    <div class="container header-content">
-      <div class="brand">
-        <div class="brand-icon">⚡</div>
-        <div>
-          <h1>Calculadora Eléctrica RIC Chile</h1>
-          <p>Caída de tensión, sección de conductores y resistencia según Pliegos SEC (RIC N°03 y N°04).</p>
-        </div>
+  <!-- ENCABEZADO INSTITUCIONAL -->
+  <header>
+    <div class="calc-header-container header-flex">
+      <div class="brand-layout">
+        <span class="brand-badge">⚡</span>
+        <span>PROFE DIEGO</span>
       </div>
-      <div class="header-actions">
-        <button type="button" id="btnReset" class="btn btn-ghost" title="Restaurar valores iniciales">
-          ↺ Reiniciar
-        </button>
-        <button type="button" id="btnPrint" class="btn btn-outline" title="Imprimir o guardar como PDF">
-          🖨️ Imprimir / PDF
-        </button>
+      <div class="title-layout">
+        <h1>Calculadora de Caída de Tensión y Sección</h1>
+        <p>Normativa Eléctrica Chilena SEC • Pliegos RIC N°03 y RIC N°04</p>
       </div>
     </div>
   </header>
 
-  <main class="container main-layout">
-    <!-- COLUMNA IZQUIERDA: INGRESO DE DATOS -->
-    <aside class="card config-panel">
-      <div class="card-header">
-        <h2>1. Datos del Circuito</h2>
-        <span class="badge-soft">RIC N°03 / N°04</span>
+  <main class="calc-main-container">
+    <!-- Barra superior de navegación y acciones -->
+    <div class="top-toolbar">
+      <a href="index.html" class="btn-home" style="margin-top: 0;">← Volver al Inicio</a>
+      <div class="toolbar-actions">
+        <button type="button" id="btnReset" class="btn-tool">↺ Reiniciar</button>
+        <button type="button" id="btnPrint" class="btn-tool btn-tool-gold">🖨️ Imprimir / PDF</button>
       </div>
+    </div>
 
-      <form id="calcForm" class="form-stack">
-        <!-- Qué calcular -->
-        <div class="form-group highlight-box">
-          <label for="calcMode">¿Qué deseas calcular?</label>
-          <select id="calcMode">
-            <option value="drop" selected>1. Caída de tensión: ΔV = (k · L · ρ · I) / S</option>
-            <option value="section">2. Sección mínima: S = (k · L · ρ · I) / V_pérdida</option>
-            <option value="resistance">3. Resistencia del conductor: R = (k · L · ρ) / S</option>
-          </select>
+    <div class="calc-layout">
+      <!-- COLUMNA IZQUIERDA: INGRESO DE DATOS -->
+      <aside class="card calc-card config-panel">
+        <div class="card-title-row">
+          <h2>1. Datos del Circuito</h2>
+          <span class="topic-tag" style="margin-bottom: 0;">RIC N°03 / N°04</span>
         </div>
 
-        <!-- Conductores y parámetro -->
-        <div class="form-row">
-          <div class="form-group">
-            <label for="conductorCount">Conductores (k)</label>
-            <select id="conductorCount">
-              <option value="2" selected>2 conductores (2 · L)</option>
-              <option value="1">1 conductor (1 · L)</option>
-              <option value="tri">Trifásico (√3 · L)</option>
+        <form id="calcForm" class="form-stack">
+          <!-- Qué calcular -->
+          <div class="form-group highlight-box">
+            <label for="calcMode">¿Qué deseas calcular?</label>
+            <select id="calcMode" class="form-control">
+              <option value="drop" selected>1. Caída de tensión: ΔV = (k · L · ρ · I) / S</option>
+              <option value="section">2. Sección mínima: S = (k · L · ρ · I) / V_pérdida</option>
+              <option value="resistance">3. Resistencia del conductor: R = (k · L · ρ) / S</option>
             </select>
           </div>
 
-          <div class="form-group">
-            <label for="propMode">Parámetro material</label>
-            <select id="propMode">
-              <option value="rho" selected>Resistividad (ρ)</option>
-              <option value="gamma">Conductividad (γ)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Tensión y Largo -->
-        <div class="form-row">
-          <div class="form-group">
-            <label for="voltageInput">Tensión V (Volt)</label>
-            <input type="number" id="voltageInput" value="220" min="0.1" step="any" required />
-            <div class="quick-pills">
-              <button type="button" class="pill" data-v="12">12V</button>
-              <button type="button" class="pill" data-v="24">24V</button>
-              <button type="button" class="pill" data-v="220">220V</button>
-              <button type="button" class="pill" data-v="380">380V</button>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="lengthInput">Largo L (metros)</label>
-            <input type="number" id="lengthInput" value="35" min="0.001" step="any" required />
-          </div>
-        </div>
-
-        <!-- Carga eléctrica -->
-        <div id="loadSectionGroup" class="form-stack">
+          <!-- Conductores y parámetro -->
           <div class="form-row">
             <div class="form-group">
-              <label for="loadMode">Dato de carga</label>
-              <select id="loadMode">
-                <option value="current_only" selected>Solo Corriente I (A)</option>
-                <option value="current_cos">Corriente I + cos φ</option>
-                <option value="power">Potencia P + cos φ</option>
+              <label for="conductorCount">Conductores (k)</label>
+              <select id="conductorCount" class="form-control">
+                <option value="2" selected>2 conductores (2 · L)</option>
+                <option value="1">1 conductor (1 · L)</option>
+                <option value="tri">Trifásico (√3 · L)</option>
               </select>
             </div>
 
-            <div class="form-group" id="groupCurrent">
-              <label for="currentInput">Corriente I (A)</label>
-              <input type="number" id="currentInput" value="25" min="0.001" step="any" />
+            <div class="form-group">
+              <label for="propMode">Parámetro material</label>
+              <select id="propMode" class="form-control">
+                <option value="rho" selected>Resistividad (ρ)</option>
+                <option value="gamma">Conductividad (γ)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Tensión y Largo -->
+          <div class="form-row">
+            <div class="form-group">
+              <label for="voltageInput">Tensión V (Volt)</label>
+              <input type="number" id="voltageInput" class="form-control" value="220" min="0.1" step="any" required />
+              <div class="quick-pills">
+                <button type="button" class="pill" data-v="12">12V</button>
+                <button type="button" class="pill" data-v="24">24V</button>
+                <button type="button" class="pill" data-v="220">220V</button>
+                <button type="button" class="pill" data-v="380">380V</button>
+              </div>
             </div>
 
-            <div class="form-group hidden" id="groupPower">
-              <label for="powerInput">Potencia P</label>
-              <div class="input-with-unit">
-                <input type="number" id="powerInput" value="5.5" min="0.001" step="any" />
-                <select id="powerUnit">
-                  <option value="kW" selected>kW</option>
-                  <option value="W">W</option>
+            <div class="form-group">
+              <label for="lengthInput">Largo L (metros)</label>
+              <input type="number" id="lengthInput" class="form-control" value="35" min="0.001" step="any" required />
+            </div>
+          </div>
+
+          <!-- Carga eléctrica -->
+          <div id="loadSectionGroup" class="form-stack">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="loadMode">Dato de carga</label>
+                <select id="loadMode" class="form-control">
+                  <option value="current_only" selected>Solo Corriente I (A)</option>
+                  <option value="current_cos">Corriente I + cos φ</option>
+                  <option value="power">Potencia P + cos φ</option>
                 </select>
+              </div>
+
+              <div class="form-group" id="groupCurrent">
+                <label for="currentInput">Corriente I (A)</label>
+                <input type="number" id="currentInput" class="form-control" value="25" min="0.001" step="any" />
+              </div>
+
+              <div class="form-group hidden" id="groupPower">
+                <label for="powerInput">Potencia P</label>
+                <div class="input-with-unit">
+                  <input type="number" id="powerInput" class="form-control" value="5.5" min="0.001" step="any" />
+                  <select id="powerUnit" class="form-control">
+                    <option value="kW" selected>kW</option>
+                    <option value="W">W</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-group hidden" id="groupCosphi">
+              <label for="cosphiInput">Factor de potencia (cos φ)</label>
+              <input type="number" id="cosphiInput" class="form-control" value="0.9" min="0.01" max="1" step="0.01" />
+            </div>
+          </div>
+
+          <!-- Material del conductor -->
+          <div class="section-divider"><span>Material del Conductor</span></div>
+
+          <div class="form-group">
+            <label for="materialPreset">Material y temperatura</label>
+            <select id="materialPreset" class="form-control">
+              <option value="cu20_iec" selected>Cobre 20 °C — Norma RIC / IEC (ρ = 0,0172)</option>
+              <option value="cu20_trad">Cobre 20 °C — Redondeo clásico (ρ = 0,018)</option>
+              <option value="cu70">Cobre en servicio PVC 70 °C (ρ = 0,0214)</option>
+              <option value="cu90">Cobre en servicio XLPE 90 °C (ρ = 0,0228)</option>
+              <option value="al20">Aluminio 20 °C (ρ = 0,028)</option>
+              <option value="al70">Aluminio en servicio PVC 70 °C (ρ = 0,034)</option>
+              <option value="custom">Personalizado (editar abajo)</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rhoInput">Resistividad ρ (Ω·mm²/m)</label>
+              <input type="number" id="rhoInput" class="form-control" value="0.0172" min="0.00001" step="any" required />
+            </div>
+
+            <div class="form-group">
+              <label for="gammaInput">Conductividad γ [m/(Ω·mm²)]</label>
+              <input type="number" id="gammaInput" class="form-control" value="58.14" min="0.01" step="any" required />
+            </div>
+          </div>
+
+          <!-- Sección y Voltaje de pérdida -->
+          <div class="section-divider"><span>Sección y Límite RIC N°03</span></div>
+
+          <div class="form-group" id="groupSection">
+            <label for="sectionInput">Sección del conductor S (mm²)</label>
+            <div class="section-combo">
+              <input type="number" id="sectionInput" class="form-control" value="4" min="0.05" step="any" placeholder="Ej: 4" />
+              <select id="sectionQuickSelect" class="form-control" title="Elegir sección normalizada RIC N°04">
+                <option value="">Elegir RIC...</option>
+                <option value="1.5">1,5 mm² (Ilum.)</option>
+                <option value="2.5">2,5 mm² (Ench.)</option>
+                <option value="4" selected>4 mm² (Alim.)</option>
+                <option value="6">6 mm²</option>
+                <option value="10">10 mm²</option>
+                <option value="16">16 mm²</option>
+                <option value="25">25 mm²</option>
+                <option value="35">35 mm²</option>
+                <option value="50">50 mm²</option>
+                <option value="70">70 mm²</option>
+                <option value="95">95 mm²</option>
+                <option value="120">120 mm²</option>
+                <option value="150">150 mm²</option>
+                <option value="185">185 mm²</option>
+                <option value="240">240 mm²</option>
+              </select>
+            </div>
+            <span class="field-hint">Escribe cualquier calibre en mm² o selecciona uno normalizado.</span>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group hidden" id="groupVLoss">
+              <label for="vLossInput">Voltaje pérdida V<sub>pérdida</sub> (V)</label>
+              <input type="number" id="vLossInput" class="form-control" value="6.6" min="0.001" step="any" />
+            </div>
+
+            <div class="form-group" id="groupMaxPct">
+              <label for="maxDropInput">Límite ΔV% (RIC N°03)</label>
+              <input type="number" id="maxDropInput" class="form-control" value="3" min="0.01" max="100" step="any" required />
+              <div class="quick-pills">
+                <button type="button" class="pill" data-dv="3">3% Alim.</button>
+                <button type="button" class="pill" data-dv="5">5% Total</button>
               </div>
             </div>
           </div>
 
-          <div class="form-group hidden" id="groupCosphi">
-            <label for="cosphiInput">Factor de potencia (cos φ)</label>
-            <input type="number" id="cosphiInput" value="0.9" min="0.01" max="1" step="0.01" />
-          </div>
-        </div>
+          <button type="submit" id="btnCalculate" class="btn" style="margin-top: 8px;">
+            Calcular Resultados
+          </button>
+        </form>
+      </aside>
 
-        <!-- Material del conductor -->
-        <div class="divider"><span>Material del Conductor</span></div>
-
-        <div class="form-group">
-          <label for="materialPreset">Material y temperatura</label>
-          <select id="materialPreset">
-            <option value="cu20_iec" selected>Cobre 20 °C — Norma RIC / IEC (ρ = 0,0172)</option>
-            <option value="cu20_trad">Cobre 20 °C — Redondeo clásico (ρ = 0,018)</option>
-            <option value="cu70">Cobre en servicio PVC 70 °C (ρ = 0,0214)</option>
-            <option value="cu90">Cobre en servicio XLPE 90 °C (ρ = 0,0228)</option>
-            <option value="al20">Aluminio 20 °C (ρ = 0,028)</option>
-            <option value="al70">Aluminio en servicio PVC 70 °C (ρ = 0,034)</option>
-            <option value="custom">Personalizado (editar abajo)</option>
-          </select>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="rhoInput">Resistividad ρ (Ω·mm²/m)</label>
-            <input type="number" id="rhoInput" value="0.0172" min="0.00001" step="any" required />
+      <!-- COLUMNA DERECHA: RESULTADOS, DESARROLLO Y TABLAS -->
+      <section class="results-column">
+        <!-- RESUMEN DE RESULTADOS -->
+        <article class="card calc-card">
+          <div class="card-title-row">
+            <h2>2. Resultados Obtenidos</h2>
           </div>
 
-          <div class="form-group">
-            <label for="gammaInput">Conductividad γ [m/(Ω·mm²)]</label>
-            <input type="number" id="gammaInput" value="58.14" min="0.01" step="any" required />
-          </div>
-        </div>
+          <div id="errorBanner" class="error-banner hidden"></div>
+          <div id="kpiGrid" class="kpi-grid"></div>
+          <div id="verdictBanner" class="verdict-box"></div>
+        </article>
 
-        <!-- Sección y Voltaje de pérdida -->
-        <div class="divider"><span>Sección y Límite RIC N°03</span></div>
-
-        <div class="form-group" id="groupSection">
-          <label for="sectionInput">Sección del conductor S (mm²)</label>
-          <div class="section-combo">
-            <input type="number" id="sectionInput" value="4" min="0.05" step="any" placeholder="Ej: 4 o 2.5" />
-            <select id="sectionQuickSelect" title="Elegir sección normalizada RIC N°04">
-              <option value="">Elegir RIC...</option>
-              <option value="1.5">1,5 mm² (Ilum.)</option>
-              <option value="2.5">2,5 mm² (Ench.)</option>
-              <option value="4" selected>4 mm² (Alim.)</option>
-              <option value="6">6 mm²</option>
-              <option value="10">10 mm²</option>
-              <option value="16">16 mm²</option>
-              <option value="25">25 mm²</option>
-              <option value="35">35 mm²</option>
-              <option value="50">50 mm²</option>
-              <option value="70">70 mm²</option>
-              <option value="95">95 mm²</option>
-              <option value="120">120 mm²</option>
-              <option value="150">150 mm²</option>
-              <option value="185">185 mm²</option>
-              <option value="240">240 mm²</option>
-            </select>
-          </div>
-          <span class="field-hint">Escribe cualquier calibre en mm² o elige uno normalizado.</span>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group hidden" id="groupVLoss">
-            <label for="vLossInput">Voltaje pérdida V<sub>pérdida</sub> (V)</label>
-            <input type="number" id="vLossInput" value="6.6" min="0.001" step="any" />
+        <!-- DESARROLLO DEL EJERCICIO -->
+        <article class="card calc-card">
+          <div class="card-title-row">
+            <h2>3. Desarrollo Paso a Paso</h2>
           </div>
 
-          <div class="form-group" id="groupMaxPct">
-            <label for="maxDropInput">Límite ΔV% (RIC N°03)</label>
-            <input type="number" id="maxDropInput" value="3" min="0.01" max="100" step="any" required />
-            <div class="quick-pills">
-              <button type="button" class="pill" data-dv="3">3% Alim.</button>
-              <button type="button" class="pill" data-dv="5">5% Total</button>
+          <div class="data-summary">
+            <ul id="dataList" class="data-tags"></ul>
+          </div>
+
+          <div id="stepsContainer" class="steps-wrapper"></div>
+        </article>
+
+        <!-- TABLAS NORMATIVAS RIC -->
+        <article class="card calc-card tables-card">
+          <div class="card-title-row">
+            <h2>4. Tablas Normativas SEC Chile (Pliegos RIC)</h2>
+          </div>
+
+          <div class="tables-two-col">
+            <!-- Tabla RIC N°04 Punto 5.4 -->
+            <div class="table-section">
+              <h3>Tabla 1: Secciones Mínimas (RIC N°04 - Punto 5.4)</h3>
+              <p class="table-note">En Chile es obligatorio usar secciones milimétricas. No se permite 16 AWG (1,31 mm²) ni 14 AWG (2,08 mm²).</p>
+              <div class="table-responsive">
+                <table class="leaderboard-table ric-table">
+                  <thead>
+                    <tr>
+                      <th>Circuito o tramo</th>
+                      <th>Sección mín.</th>
+                      <th style="width: 85px; text-align: center;">Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="leaderboard-row">
+                      <td>Circuitos de iluminación</td>
+                      <td><strong>1,5 mm²</strong></td>
+                      <td style="text-align: center;"><button type="button" class="btn-table" onclick="applySection(1.5)">Usar</button></td>
+                    </tr>
+                    <tr class="leaderboard-row">
+                      <td>Circuitos de enchufes</td>
+                      <td><strong>2,5 mm²</strong></td>
+                      <td style="text-align: center;"><button type="button" class="btn-table" onclick="applySection(2.5)">Usar</button></td>
+                    </tr>
+                    <tr class="leaderboard-row">
+                      <td>Circuitos mixtos (alumbrado + enchufes)</td>
+                      <td><strong>2,5 mm²</strong></td>
+                      <td style="text-align: center;"><button type="button" class="btn-table" onclick="applySection(2.5)">Usar</button></td>
+                    </tr>
+                    <tr class="leaderboard-row">
+                      <td>Subalimentadores</td>
+                      <td><strong>2,5 mm²</strong></td>
+                      <td style="text-align: center;"><button type="button" class="btn-table" onclick="applySection(2.5)">Usar</button></td>
+                    </tr>
+                    <tr class="leaderboard-row">
+                      <td>Alimentadores</td>
+                      <td><strong>4 mm²</strong></td>
+                      <td style="text-align: center;"><button type="button" class="btn-table" onclick="applySection(4)">Usar</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Tabla RIC N°03 Punto 5.1.3 -->
+            <div class="table-section">
+              <h3>Tabla 2: Caída de Tensión Máx. (RIC N°03 - 5.1.3)</h3>
+              <p class="table-note">Porcentaje máximo admisible respecto a la tensión nominal de alimentación.</p>
+              <div class="table-responsive">
+                <table class="leaderboard-table ric-table">
+                  <thead>
+                    <tr>
+                      <th>Tramo de la instalación</th>
+                      <th>ΔV% Máx.</th>
+                      <th>En 220 V</th>
+                      <th>En 380 V</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="leaderboard-row">
+                      <td>Alimentadores y subalimentadores</td>
+                      <td><strong>3 %</strong></td>
+                      <td>6,6 V</td>
+                      <td>11,4 V</td>
+                    </tr>
+                    <tr class="leaderboard-row">
+                      <td>Total acumulada (punto desfavorable)</td>
+                      <td><strong>5 %</strong></td>
+                      <td>11 V</td>
+                      <td>19 V</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
 
-        <button type="submit" id="btnCalculate" class="btn btn-primary">
-          Calcular Resultados
-        </button>
-      </form>
-    </aside>
-
-    <!-- COLUMNA DERECHA: RESULTADOS, DESARROLLO Y TABLAS -->
-    <section class="results-column">
-      <!-- RESUMEN DE RESULTADOS -->
-      <article class="card">
-        <div class="card-header">
-          <h2>2. Resultados Obtenidos</h2>
-        </div>
-
-        <div id="errorBanner" class="alert alert-error hidden"></div>
-        <div id="kpiGrid" class="kpi-grid"></div>
-        <div id="verdictBanner" class="verdict-box"></div>
-      </article>
-
-      <!-- DESARROLLO DEL EJERCICIO -->
-      <article class="card">
-        <div class="card-header">
-          <h2>3. Desarrollo Paso a Paso</h2>
-        </div>
-
-        <div class="data-summary">
-          <ul id="dataList" class="data-tags"></ul>
-        </div>
-
-        <div id="stepsContainer" class="steps-wrapper"></div>
-      </article>
-
-      <!-- TABLAS NORMATIVAS RIC -->
-      <article class="card tables-card">
-        <div class="card-header">
-          <h2>4. Tablas Normativas SEC Chile (Pliegos RIC N°03 y RIC N°04)</h2>
-        </div>
-
-        <div class="tables-two-col">
-          <!-- Tabla RIC N°04 Punto 5.4 -->
+          <!-- Tabla de Materiales -->
           <div class="table-section">
-            <h3>Tabla 1: Secciones Mínimas Milimétricas (RIC N°04 - Punto 5.4)</h3>
-            <p class="table-note">En Chile es obligatorio usar secciones milimétricas. No se permite 16 AWG (1,31 mm²) ni 14 AWG (2,08 mm²).</p>
+            <h3>Tabla 3: Resistividad (ρ) y Conductividad (γ) de Conductores</h3>
+            <p class="table-note">El valor normativo IEC 60228 / RIC N°04 para cobre recocido a 20 °C es <strong>0,0172 Ω·mm²/m</strong> (1/58). El valor 0,018 corresponde al redondeo tradicional de estudio.</p>
             <div class="table-responsive">
-              <table>
+              <table class="leaderboard-table ric-table">
                 <thead>
                   <tr>
-                    <th>Circuito o tramo</th>
-                    <th>Sección mín.</th>
-                    <th>Acción</th>
+                    <th>Material y condición</th>
+                    <th>Temp.</th>
+                    <th>Resistividad ρ (Ω·mm²/m)</th>
+                    <th>Conductividad γ [m/(Ω·mm²)]</th>
+                    <th style="width: 95px; text-align: center;">Acción</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td>Circuitos de iluminación</td>
-                    <td><strong>1,5 mm²</strong></td>
-                    <td><button type="button" class="btn-table" onclick="applySection(1.5)">Usar</button></td>
-                  </tr>
-                  <tr>
-                    <td>Circuitos de enchufes</td>
-                    <td><strong>2,5 mm²</strong></td>
-                    <td><button type="button" class="btn-table" onclick="applySection(2.5)">Usar</button></td>
-                  </tr>
-                  <tr>
-                    <td>Circuitos mixtos (alumbrado + enchufes)</td>
-                    <td><strong>2,5 mm²</strong></td>
-                    <td><button type="button" class="btn-table" onclick="applySection(2.5)">Usar</button></td>
-                  </tr>
-                  <tr>
-                    <td>Subalimentadores</td>
-                    <td><strong>2,5 mm²</strong></td>
-                    <td><button type="button" class="btn-table" onclick="applySection(2.5)">Usar</button></td>
-                  </tr>
-                  <tr>
-                    <td>Alimentadores</td>
-                    <td><strong>4 mm²</strong></td>
-                    <td><button type="button" class="btn-table" onclick="applySection(4)">Usar</button></td>
-                  </tr>
-                </tbody>
+                <tbody id="materialsTableBody"></tbody>
               </table>
             </div>
           </div>
 
-          <!-- Tabla RIC N°03 Punto 5.1.3 -->
+          <!-- Tabla RIC N°04 Tabla 4.1 -->
           <div class="table-section">
-            <h3>Tabla 2: Caída de Tensión Máxima (RIC N°03 - Punto 5.1.3)</h3>
-            <p class="table-note">Porcentaje máximo admisible respecto a la tensión nominal.</p>
+            <h3>Tabla 4: Secciones Nominales y Resistencia Máxima (RIC N°04 - Tabla N°4.1)</h3>
+            <p class="table-note">Valores oficiales para conductores de cobre blando recocido (100% IACS) a 20 °C.</p>
             <div class="table-responsive">
-              <table>
+              <table class="leaderboard-table ric-table">
                 <thead>
                   <tr>
-                    <th>Tramo de la instalación</th>
-                    <th>ΔV% Máx.</th>
-                    <th>En 220 V</th>
-                    <th>En 380 V</th>
+                    <th>Sección (mm²)</th>
+                    <th>R máx. CC a 20 °C (Ω/km)</th>
+                    <th>Uso habitual según RIC</th>
+                    <th style="width: 85px; text-align: center;">Acción</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <tr>
-                    <td>Alimentadores y subalimentadores</td>
-                    <td><strong>3 %</strong></td>
-                    <td>6,6 V</td>
-                    <td>11,4 V</td>
-                  </tr>
-                  <tr>
-                    <td>Total acumulada (punto más desfavorable)</td>
-                    <td><strong>5 %</strong></td>
-                    <td>11 V</td>
-                    <td>19 V</td>
-                  </tr>
-                </tbody>
+                <tbody id="sectionsTableBody"></tbody>
               </table>
             </div>
           </div>
-        </div>
-
-        <!-- Tabla de Materiales -->
-        <div class="table-section">
-          <h3>Tabla 3: Resistividad (ρ) y Conductividad (γ) de Conductores</h3>
-          <p class="table-note">El valor normativo IEC 60228 / RIC N°04 para cobre recocido a 20 °C es <strong>0,0172 Ω·mm²/m</strong> (1/58). El valor 0,018 corresponde al redondeo tradicional usado en guías de estudio.</p>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Material y condición</th>
-                  <th>Temp.</th>
-                  <th>Resistividad ρ (Ω·mm²/m)</th>
-                  <th>Conductividad γ [m/(Ω·mm²)]</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody id="materialsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tabla RIC N°04 Tabla 4.1 -->
-        <div class="table-section">
-          <h3>Tabla 4: Secciones Nominales Milimétricas y Resistencia Máxima (RIC N°04 - Tabla N°4.1)</h3>
-          <p class="table-note">Valores oficiales para conductores de cobre blando recocido (100% IACS) a 20 °C.</p>
-          <div class="table-responsive">
-            <table>
-              <thead>
-                <tr>
-                  <th>Sección nominal (mm²)</th>
-                  <th>Resistencia máx. CC a 20 °C (Ω/km)</th>
-                  <th>Uso habitual según RIC</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody id="sectionsTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </article>
-    </section>
+        </article>
+      </section>
+    </div>
   </main>
 
   <script src="script.js"></script>

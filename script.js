@@ -46,7 +46,7 @@ const MATERIALS_DATA = [
   }
 ];
 
-// Tabla N°4.1 del Pliego Técnico RIC N°04 (Secciones nominales milimétricas y R máx. a 20 °C)
+// Tabla N°4.1 del Pliego Técnico RIC N°04
 const RIC_SECTIONS_TABLE_4_1 = [
   { mm2: 1.5, rMaxKm: 12.1, usage: "Mínimo reglamentario circuitos de iluminación (RIC N°04 5.4)" },
   { mm2: 2.5, rMaxKm: 7.41, usage: "Mínimo enchufes, circuitos mixtos y subalimentadores" },
@@ -66,23 +66,24 @@ const RIC_SECTIONS_TABLE_4_1 = [
 ];
 
 // ==========================================
-// FORMATEO NUMÉRICO:
-// - Enteros: sin decimales
-// - Decimales: máximo 3 (redondeo mitad arriba: 4to decimal >= 5 sube el 3ro)
+// REGLA DE REDONDEO SOLICITADA:
+// - Si es entero: sin decimales
+// - Si tiene decimales: máximo 3 (4to decimal >= 5 sube el 3ro)
 // ==========================================
 function roundHalfUp(num, maxDecimals = 3) {
   if (!isFinite(num)) return NaN;
   const factor = Math.pow(10, maxDecimals);
-  // Epsilon evita errores binarios de punto flotante (ej. 1.005 * 1000 = 1004.9999999999999)
   const sign = num < 0 ? -1 : 1;
-  const rounded = sign * Math.round((Math.abs(num) + Number.EPSILON) * factor) / factor;
+  // Evita imprecisión binaria en IEEE 754 (ej. 1.005 * 1000)
+  const scaled = Math.abs(num) * factor;
+  const rounded = sign * Math.round(scaled + 1e-11) / factor;
   return Object.is(rounded, -0) ? 0 : rounded;
 }
 
 function fmt(num, maxDecimals = 3) {
   if (!isFinite(num)) return "—";
   const rounded = roundHalfUp(num, maxDecimals);
-  // Number.toString() elimina automáticamente decimales si es entero y ceros sobrantes a la derecha
+  // Number.toString() omite decimales si es entero y elimina ceros finales
   return rounded.toString().replace(".", ",");
 }
 
@@ -215,12 +216,12 @@ function renderTables(activeSectionMm2 = null) {
   dom.materialsTableBody.innerHTML = MATERIALS_DATA.map((mat) => {
     const isHighlight = mat.id === selectedMat ? "row-highlight" : "";
     return `
-      <tr class="${isHighlight}">
+      <tr class="leaderboard-row ${isHighlight}">
         <td>${mat.name}</td>
         <td>${mat.temp}</td>
         <td><strong>${fmt(mat.rho, 4)}</strong></td>
         <td>${fmt(mat.gamma, 3)}</td>
-        <td>
+        <td style="text-align: center;">
           <button type="button" class="btn-table" onclick="applyMaterial('${mat.id}')">
             Aplicar
           </button>
@@ -232,11 +233,11 @@ function renderTables(activeSectionMm2 = null) {
   dom.sectionsTableBody.innerHTML = RIC_SECTIONS_TABLE_4_1.map((sec) => {
     const isHighlight = activeSectionMm2 === sec.mm2 ? "row-highlight" : "";
     return `
-      <tr class="${isHighlight}">
+      <tr class="leaderboard-row ${isHighlight}">
         <td><strong>${fmt(sec.mm2, 3)} mm²</strong></td>
         <td>${fmt(sec.rMaxKm, 4)} Ω/km</td>
         <td>${sec.usage}</td>
-        <td>
+        <td style="text-align: center;">
           <button type="button" class="btn-table" onclick="applySection(${sec.mm2})">
             Usar
           </button>
@@ -343,28 +344,28 @@ function calculateAndRender() {
   // Etiquetas de datos ingresados
   const tags = [
     `<li><strong>Conductores:</strong> ${condDesc}</li>`,
-    `<li><strong>Tensión (V):</strong> ${fmt(V, 3)} V</li>`,
-    `<li><strong>Largo (L):</strong> ${fmt(L, 3)} m</li>`
+    `<li><strong>Tensión (V):</strong> ${fmt(V)} V</li>`,
+    `<li><strong>Largo (L):</strong> ${fmt(L)} m</li>`
   ];
   if (mode !== "resistance") {
     if (loadMode === "power") {
-      tags.push(`<li><strong>Potencia (P):</strong> ${fmt(P_watts, 3)} W</li>`);
+      tags.push(`<li><strong>Potencia (P):</strong> ${fmt(P_watts)} W</li>`);
     } else {
-      tags.push(`<li><strong>Corriente (I):</strong> ${fmt(I, 3)} A</li>`);
+      tags.push(`<li><strong>Corriente (I):</strong> ${fmt(I)} A</li>`);
     }
     if (useCosphi) {
-      tags.push(`<li><strong>cos φ:</strong> ${fmt(cosphi, 3)}</li>`);
+      tags.push(`<li><strong>cos φ:</strong> ${fmt(cosphi)}</li>`);
     }
   }
   if (propMode === "rho") {
     tags.push(`<li><strong>Resistividad (ρ):</strong> ${fmt(rho, 4)} Ω·mm²/m</li>`);
   } else {
-    tags.push(`<li><strong>Conductividad (γ):</strong> ${fmt(gamma, 3)} m/(Ω·mm²)</li>`);
+    tags.push(`<li><strong>Conductividad (γ):</strong> ${fmt(gamma)} m/(Ω·mm²)</li>`);
   }
   if (mode !== "section") {
-    tags.push(`<li><strong>Sección (S):</strong> ${fmt(S_selected, 3)} mm²</li>`);
+    tags.push(`<li><strong>Sección (S):</strong> ${fmt(S_selected)} mm²</li>`);
   } else {
-    tags.push(`<li><strong>V<sub>pérdida</sub> admisible:</strong> ${fmt(vLossAllowed, 3)} V (${fmt(maxPct, 3)}%)</li>`);
+    tags.push(`<li><strong>V<sub>pérdida</sub> admisible:</strong> ${fmt(vLossAllowed)} V (${fmt(maxPct)}%)</li>`);
   }
   dom.dataList.innerHTML = tags.join("");
 
@@ -375,8 +376,8 @@ function calculateAndRender() {
   if (mode !== "resistance" && loadMode === "power") {
     const denF = condType === "tri" ? "√3 · V · cos φ" : "V · cos φ";
     const denV = condType === "tri"
-      ? `1,732 · ${fmt(V, 3)} · ${fmt(cosphi, 3)}`
-      : `${fmt(V, 3)} · ${fmt(cosphi, 3)}`;
+      ? `1,732 · ${fmt(V)} · ${fmt(cosphi)}`
+      : `${fmt(V)} · ${fmt(cosphi)}`;
 
     steps.push(`
       <div class="step-card">
@@ -385,9 +386,9 @@ function calculateAndRender() {
           <span>I =</span>
           ${frac("P", denF)}
           <span>=</span>
-          ${frac(`${fmt(P_watts, 3)}`, denV)}
+          ${frac(`${fmt(P_watts)}`, denV)}
           <span>=</span>
-          <span class="math-result">${fmt(I, 3)} A</span>
+          <span class="math-result">${fmt(I)} A</span>
         </div>
       </div>
     `);
@@ -396,7 +397,7 @@ function calculateAndRender() {
   // Helper para ecuación de caída de tensión
   function renderDropMath(S_val, dV_val) {
     const cosF = useCosphi ? " · cos φ" : "";
-    const cosV = useCosphi ? ` · ${fmt(cosphi, 3)}` : "";
+    const cosV = useCosphi ? ` · ${fmt(cosphi)}` : "";
 
     if (propMode === "rho") {
       return `
@@ -404,9 +405,9 @@ function calculateAndRender() {
           <span>ΔV =</span>
           ${frac(`${kFormula} · L · ρ · I${cosF}`, "S")}
           <span>=</span>
-          ${frac(`${kNumeric} · ${fmt(L, 3)} · ${fmt(rho, 4)} · ${fmt(I, 3)}${cosV}`, `${fmt(S_val, 3)}`)}
+          ${frac(`${kNumeric} · ${fmt(L)} · ${fmt(rho, 4)} · ${fmt(I)}${cosV}`, `${fmt(S_val)}`)}
           <span>=</span>
-          <span class="math-result">${fmt(dV_val, 3)} V</span>
+          <span class="math-result">${fmt(dV_val)} V</span>
         </div>
       `;
     } else {
@@ -415,9 +416,9 @@ function calculateAndRender() {
           <span>ΔV =</span>
           ${frac(`${kFormula} · L · I${cosF}`, "γ · S")}
           <span>=</span>
-          ${frac(`${kNumeric} · ${fmt(L, 3)} · ${fmt(I, 3)}${cosV}`, `${fmt(gamma, 3)} · ${fmt(S_val, 3)}`)}
+          ${frac(`${kNumeric} · ${fmt(L)} · ${fmt(I)}${cosV}`, `${fmt(gamma)} · ${fmt(S_val)}`)}
           <span>=</span>
-          <span class="math-result">${fmt(dV_val, 3)} V</span>
+          <span class="math-result">${fmt(dV_val)} V</span>
         </div>
       `;
     }
@@ -431,9 +432,9 @@ function calculateAndRender() {
           <span>R =</span>
           ${frac(`${kFormula} · L · ρ`, "S")}
           <span>=</span>
-          ${frac(`${kNumeric} · ${fmt(L, 3)} · ${fmt(rho, 4)}`, `${fmt(S_val, 3)}`)}
+          ${frac(`${kNumeric} · ${fmt(L)} · ${fmt(rho, 4)}`, `${fmt(S_val)}`)}
           <span>=</span>
-          <span class="math-result">${fmt(R_val, 3)} Ω</span>
+          <span class="math-result">${fmt(R_val)} Ω</span>
         </div>
       `;
     } else {
@@ -442,9 +443,9 @@ function calculateAndRender() {
           <span>R =</span>
           ${frac(`${kFormula} · L`, "γ · S")}
           <span>=</span>
-          ${frac(`${kNumeric} · ${fmt(L, 3)}`, `${fmt(gamma, 3)} · ${fmt(S_val, 3)}`)}
+          ${frac(`${kNumeric} · ${fmt(L)}`, `${fmt(gamma)} · ${fmt(S_val)}`)}
           <span>=</span>
-          <span class="math-result">${fmt(R_val, 3)} Ω</span>
+          <span class="math-result">${fmt(R_val)} Ω</span>
         </div>
       `;
     }
@@ -469,23 +470,23 @@ function calculateAndRender() {
     dom.kpiGrid.innerHTML = `
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Caída de Tensión (ΔV)</div>
-        <div class="kpi-value">${fmt(dV, 3)} V</div>
+        <div class="kpi-value">${fmt(dV)} V</div>
         <div class="kpi-sub">${condDesc}</div>
       </div>
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Porcentaje (ΔV%)</div>
-        <div class="kpi-value">${fmt(dV_pct, 3)} %</div>
-        <div class="kpi-sub">Límite configurado: ${fmt(maxPct, 3)}%</div>
+        <div class="kpi-value">${fmt(dV_pct)} %</div>
+        <div class="kpi-sub">Límite configurado: ${fmt(maxPct)}%</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Resistencia Conductor (R)</div>
-        <div class="kpi-value">${fmt(R, 3)} Ω</div>
-        <div class="kpi-sub">Sección S = ${fmt(S_selected, 3)} mm²</div>
+        <div class="kpi-value">${fmt(R)} Ω</div>
+        <div class="kpi-sub">Sección S = ${fmt(S_selected)} mm²</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Tensión en la Carga</div>
-        <div class="kpi-value">${fmt(V_load, 3)} V</div>
-        <div class="kpi-sub">Alimentación: ${fmt(V, 3)} V</div>
+        <div class="kpi-value">${fmt(V_load)} V</div>
+        <div class="kpi-sub">Alimentación: ${fmt(V)} V</div>
       </div>
     `;
 
@@ -505,11 +506,11 @@ function calculateAndRender() {
           <span>ΔV% =</span>
           ${frac("ΔV", "V")}
           <span>· 100 =</span>
-          ${frac(`${fmt(dV, 3)} V`, `${fmt(V, 3)} V`)}
+          ${frac(`${fmt(dV)} V`, `${fmt(V)} V`)}
           <span>· 100 =</span>
-          <span class="math-result">${fmt(dV_pct, 3)} %</span>
+          <span class="math-result">${fmt(dV_pct)} %</span>
         </div>
-        <p class="step-desc">Tensión resultante en el punto de consumo: <strong>${fmt(V, 3)} V − ${fmt(dV, 3)} V = ${fmt(V_load, 3)} V</strong>.</p>
+        <p class="step-desc">Tensión resultante en el punto de consumo: <strong>${fmt(V)} V − ${fmt(dV)} V = ${fmt(V_load)} V</strong>.</p>
       </div>
     `);
 
@@ -526,10 +527,10 @@ function calculateAndRender() {
     const isOk = roundHalfUp(dV_pct, 3) <= roundHalfUp(maxPct, 3);
     dom.verdictBanner.className = `verdict-box ${isOk ? "verdict-ok" : "verdict-fail"}`;
     dom.verdictBanner.innerHTML = isOk
-      ? `<h4>CUMPLE CON EL LÍMITE NORMATIVO (${fmt(dV_pct, 3)}% ≤ ${fmt(maxPct, 3)}%)</h4>
-         <p>La caída de tensión es de <strong>${fmt(dV, 3)} V (${fmt(dV_pct, 3)}%)</strong> con conductor de <strong>${fmt(S_selected, 3)} mm²</strong> (R = ${fmt(R, 3)} Ω).</p>`
-      : `<h4>EXCEDE EL LÍMITE NORMATIVO (${fmt(dV_pct, 3)}% > ${fmt(maxPct, 3)}%)</h4>
-         <p>La caída de tensión es de <strong>${fmt(dV, 3)} V (${fmt(dV_pct, 3)}%)</strong>. Cambia a la opción <strong>"2. Sección mínima"</strong> para determinar el calibre adecuado.</p>`;
+      ? `<h4>CUMPLE CON EL LÍMITE NORMATIVO (${fmt(dV_pct)}% ≤ ${fmt(maxPct)}%)</h4>
+         <p>La caída de tensión es de <strong>${fmt(dV)} V (${fmt(dV_pct)}%)</strong> con conductor de <strong>${fmt(S_selected)} mm²</strong> (R = ${fmt(R)} Ω).</p>`
+      : `<h4>EXCEDE EL LÍMITE NORMATIVO (${fmt(dV_pct)}% > ${fmt(maxPct)}%)</h4>
+         <p>La caída de tensión es de <strong>${fmt(dV)} V (${fmt(dV_pct)}%)</strong>. Cambia a la opción <strong>"2. Sección mínima"</strong> para determinar el calibre adecuado.</p>`;
   }
 
   // ==========================================
@@ -543,7 +544,7 @@ function calculateAndRender() {
     const chosenObj = RIC_SECTIONS_TABLE_4_1.find((sec) => sec.mm2 >= S_calc);
 
     const cosF = useCosphi ? " · cos φ" : "";
-    const cosV = useCosphi ? ` · ${fmt(cosphi, 3)}` : "";
+    const cosV = useCosphi ? ` · ${fmt(cosphi)}` : "";
 
     const secMathHtml = propMode === "rho"
       ? `
@@ -551,9 +552,9 @@ function calculateAndRender() {
           <span>S =</span>
           ${frac(`${kFormula} · L · ρ · I${cosF}`, "V<sub>pérdida</sub>")}
           <span>=</span>
-          ${frac(`${kNumeric} · ${fmt(L, 3)} · ${fmt(rho, 4)} · ${fmt(I, 3)}${cosV}`, `${fmt(vLossAllowed, 3)}`)}
+          ${frac(`${kNumeric} · ${fmt(L)} · ${fmt(rho, 4)} · ${fmt(I)}${cosV}`, `${fmt(vLossAllowed)}`)}
           <span>=</span>
-          <span class="math-result">${fmt(S_calc, 3)} mm²</span>
+          <span class="math-result">${fmt(S_calc)} mm²</span>
         </div>
       `
       : `
@@ -561,16 +562,16 @@ function calculateAndRender() {
           <span>S =</span>
           ${frac(`${kFormula} · L · I${cosF}`, "γ · V<sub>pérdida</sub>")}
           <span>=</span>
-          ${frac(`${kNumeric} · ${fmt(L, 3)} · ${fmt(I, 3)}${cosV}`, `${fmt(gamma, 3)} · ${fmt(vLossAllowed, 3)}`)}
+          ${frac(`${kNumeric} · ${fmt(L)} · ${fmt(I)}${cosV}`, `${fmt(gamma)} · ${fmt(vLossAllowed)}`)}
           <span>=</span>
-          <span class="math-result">${fmt(S_calc, 3)} mm²</span>
+          <span class="math-result">${fmt(S_calc)} mm²</span>
         </div>
       `;
 
     steps.push(`
       <div class="step-card">
         <div class="step-title"><span class="step-badge">Paso ${stepNum++}</span> Cálculo de la sección mínima teórica (S)</div>
-        <p class="step-desc">Usando el voltaje de pérdida admisible <strong>V<sub>pérdida</sub> = ${fmt(vLossAllowed, 3)} V</strong> (${fmt(maxPct, 3)}% de ${fmt(V, 3)} V):</p>
+        <p class="step-desc">Usando el voltaje de pérdida admisible <strong>V<sub>pérdida</sub> = ${fmt(vLossAllowed)} V</strong> (${fmt(maxPct)}% de ${fmt(V)} V):</p>
         ${secMathHtml}
       </div>
     `);
@@ -579,7 +580,7 @@ function calculateAndRender() {
       dom.kpiGrid.innerHTML = `
         <div class="kpi-card kpi-highlight">
           <div class="kpi-label">Sección Teórica (S)</div>
-          <div class="kpi-value">${fmt(S_calc, 3)} mm²</div>
+          <div class="kpi-value">${fmt(S_calc)} mm²</div>
           <div class="kpi-sub">Supera 240 mm²</div>
         </div>
       `;
@@ -605,36 +606,36 @@ function calculateAndRender() {
     dom.kpiGrid.innerHTML = `
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Sección Calculada</div>
-        <div class="kpi-value">${fmt(S_calc, 3)} mm²</div>
+        <div class="kpi-value">${fmt(S_calc)} mm²</div>
         <div class="kpi-sub">Valor teórico mínimo</div>
       </div>
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Sección Comercial RIC</div>
-        <div class="kpi-value">${fmt(S_com, 3)} mm²</div>
+        <div class="kpi-value">${fmt(S_com)} mm²</div>
         <div class="kpi-sub">Tabla N°4.1 RIC N°04</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Caída Real (ΔV / ΔV%)</div>
-        <div class="kpi-value">${fmt(dV_real, 3)} V (${fmt(dV_real_pct, 3)}%)</div>
-        <div class="kpi-sub">Con sección ${fmt(S_com, 3)} mm²</div>
+        <div class="kpi-value">${fmt(dV_real)} V (${fmt(dV_real_pct)}%)</div>
+        <div class="kpi-sub">Con sección ${fmt(S_com)} mm²</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Resistencia Real (R)</div>
-        <div class="kpi-value">${fmt(R_real, 3)} Ω</div>
+        <div class="kpi-value">${fmt(R_real)} Ω</div>
         <div class="kpi-sub">${condDesc}</div>
       </div>
     `;
 
     steps.push(`
       <div class="step-card">
-        <div class="step-title"><span class="step-badge">Paso ${stepNum++}</span> Verificación con sección comercial RIC (${fmt(S_com, 3)} mm²)</div>
-        <p class="step-desc">Seleccionamos la sección comercial milimétrica inmediatamente superior según Tabla N°4.1 del RIC N°04 (<strong>${fmt(S_com, 3)} mm²</strong>) y verificamos:</p>
+        <div class="step-title"><span class="step-badge">Paso ${stepNum++}</span> Verificación con sección comercial RIC (${fmt(S_com)} mm²)</div>
+        <p class="step-desc">Seleccionamos la sección comercial milimétrica inmediatamente superior según Tabla N°4.1 del RIC N°04 (<strong>${fmt(S_com)} mm²</strong>) y verificamos:</p>
         ${renderDropMath(S_com, dV_real)}
         <div class="math-block">
           <span>ΔV%<sub>real</sub> =</span>
-          ${frac(`${fmt(dV_real, 3)} V`, `${fmt(V, 3)} V`)}
+          ${frac(`${fmt(dV_real)} V`, `${fmt(V)} V`)}
           <span>· 100 =</span>
-          <span class="math-result">${fmt(dV_real_pct, 3)} %</span>
+          <span class="math-result">${fmt(dV_real_pct)} %</span>
         </div>
         ${renderResistanceMath(S_com, R_real)}
       </div>
@@ -644,7 +645,7 @@ function calculateAndRender() {
     renderTables(S_com);
 
     dom.verdictBanner.className = "verdict-box verdict-ok";
-    dom.verdictBanner.innerHTML = `<h4>SECCIÓN COMERCIAL SELECCIONADA: ${fmt(S_com, 3)} mm²</h4>
+    dom.verdictBanner.innerHTML = `<h4>SECCIÓN COMERCIAL SELECCIONADA: ${fmt(S_com)} mm²</h4>
       <p>Verifica en la <strong>Tabla 1 (RIC N°04 Punto 5.4)</strong> la sección mínima exigida según el tipo de circuito (1,5 mm² iluminación, 2,5 mm² enchufes, 4 mm² alimentadores).</p>`;
   }
 
@@ -661,17 +662,17 @@ function calculateAndRender() {
     dom.kpiGrid.innerHTML = `
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Resistencia Total (R)</div>
-        <div class="kpi-value">${fmt(R, 3)} Ω</div>
-        <div class="kpi-sub">${condDesc} (L = ${fmt(L, 3)} m)</div>
+        <div class="kpi-value">${fmt(R)} Ω</div>
+        <div class="kpi-sub">${condDesc} (L = ${fmt(L)} m)</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Resistencia Unitaria</div>
-        <div class="kpi-value">${fmt(rPerKm, 3)} Ω/km</div>
+        <div class="kpi-value">${fmt(rPerKm)} Ω/km</div>
         <div class="kpi-sub">Por conductor simple</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Sección Evaluada</div>
-        <div class="kpi-value">${fmt(S_selected, 3)} mm²</div>
+        <div class="kpi-value">${fmt(S_selected)} mm²</div>
         <div class="kpi-sub">Parámetro ingresado</div>
       </div>
     `;
@@ -679,7 +680,7 @@ function calculateAndRender() {
     steps.push(`
       <div class="step-card">
         <div class="step-title"><span class="step-badge">Paso 1</span> Cálculo de la resistencia eléctrica del conductor (R)</div>
-        <p class="step-desc">Calculamos la resistencia eléctrica para <strong>${condDesc.toLowerCase()}</strong> de largo <strong>L = ${fmt(L, 3)} m</strong> y sección <strong>S = ${fmt(S_selected, 3)} mm²</strong>:</p>
+        <p class="step-desc">Calculamos la resistencia eléctrica para <strong>${condDesc.toLowerCase()}</strong> de largo <strong>L = ${fmt(L)} m</strong> y sección <strong>S = ${fmt(S_selected)} mm²</strong>:</p>
         ${renderResistanceMath(S_selected, R)}
       </div>
     `);
@@ -688,7 +689,7 @@ function calculateAndRender() {
     renderTables(S_selected);
 
     dom.verdictBanner.className = "verdict-box verdict-info";
-    dom.verdictBanner.innerHTML = `<h4>RESISTENCIA CALCULADA: ${fmt(R, 3)} Ω</h4>
+    dom.verdictBanner.innerHTML = `<h4>RESISTENCIA CALCULADA: ${fmt(R)} Ω</h4>
       <p>Corresponde a <strong>${condDesc.toLowerCase()}</strong>. Multiplicando este valor por la corriente I (ΔV = I · R) se obtiene directamente la caída de tensión en voltios.</p>`;
   }
 }
@@ -716,7 +717,6 @@ dom.loadMode.addEventListener("change", () => {
 
 dom.materialPreset.addEventListener("change", handleMaterialChange);
 
-// Sincronizar selector rápido de sección con el campo numérico libre
 dom.sectionQuickSelect.addEventListener("change", () => {
   if (dom.sectionQuickSelect.value) {
     dom.sectionInput.value = dom.sectionQuickSelect.value;
@@ -731,7 +731,6 @@ dom.sectionInput.addEventListener("input", () => {
   calculateAndRender();
 });
 
-// Sincronizar rho <-> gamma
 dom.rhoInput.addEventListener("input", () => {
   dom.materialPreset.value = "custom";
   const r = parseFloat(dom.rhoInput.value);
@@ -746,7 +745,6 @@ dom.gammaInput.addEventListener("input", () => {
   calculateAndRender();
 });
 
-// Sincronizar V_pérdida <-> ΔV% y Tensión
 dom.voltageInput.addEventListener("input", () => {
   syncVLossFromPct();
   calculateAndRender();
@@ -762,7 +760,6 @@ dom.vLossInput.addEventListener("input", () => {
   calculateAndRender();
 });
 
-// Recalcular en tiempo real
 [
   dom.lengthInput,
   dom.currentInput,
@@ -779,7 +776,6 @@ dom.form.addEventListener("submit", (e) => {
   calculateAndRender();
 });
 
-// Botones rápidos
 document.querySelectorAll("[data-v]").forEach((btn) => {
   btn.addEventListener("click", () => {
     dom.voltageInput.value = btn.dataset.v;
