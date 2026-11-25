@@ -66,11 +66,24 @@ const RIC_SECTIONS_TABLE_4_1 = [
 ];
 
 // ==========================================
-// UTILIDAD DE FORMATO (3 DECIMALES)
+// FORMATEO NUMÉRICO:
+// - Enteros: sin decimales
+// - Decimales: máximo 3 (redondeo mitad arriba: 4to decimal >= 5 sube el 3ro)
 // ==========================================
-function fmt(num, decimals = 3) {
+function roundHalfUp(num, maxDecimals = 3) {
+  if (!isFinite(num)) return NaN;
+  const factor = Math.pow(10, maxDecimals);
+  // Epsilon evita errores binarios de punto flotante (ej. 1.005 * 1000 = 1004.9999999999999)
+  const sign = num < 0 ? -1 : 1;
+  const rounded = sign * Math.round((Math.abs(num) + Number.EPSILON) * factor) / factor;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+function fmt(num, maxDecimals = 3) {
   if (!isFinite(num)) return "—";
-  return num.toFixed(decimals).replace(".", ",");
+  const rounded = roundHalfUp(num, maxDecimals);
+  // Number.toString() elimina automáticamente decimales si es entero y ceros sobrantes a la derecha
+  return rounded.toString().replace(".", ",");
 }
 
 function frac(numHtml, denHtml) {
@@ -131,7 +144,7 @@ function syncVLossFromPct() {
   const V = parseFloat(dom.voltageInput.value);
   const pct = parseFloat(dom.maxDropInput.value);
   if (V > 0 && pct > 0) {
-    dom.vLossInput.value = Number(((V * pct) / 100).toFixed(3));
+    dom.vLossInput.value = roundHalfUp((V * pct) / 100, 3);
   }
 }
 
@@ -139,7 +152,7 @@ function syncPctFromVLoss() {
   const V = parseFloat(dom.voltageInput.value);
   const vLoss = parseFloat(dom.vLossInput.value);
   if (V > 0 && vLoss > 0) {
-    dom.maxDropInput.value = Number(((vLoss / V) * 100).toFixed(3));
+    dom.maxDropInput.value = roundHalfUp((vLoss / V) * 100, 3);
   }
 }
 
@@ -220,8 +233,8 @@ function renderTables(activeSectionMm2 = null) {
     const isHighlight = activeSectionMm2 === sec.mm2 ? "row-highlight" : "";
     return `
       <tr class="${isHighlight}">
-        <td><strong>${fmt(sec.mm2, 1)} mm²</strong></td>
-        <td>${fmt(sec.rMaxKm, 3)} Ω/km</td>
+        <td><strong>${fmt(sec.mm2, 3)} mm²</strong></td>
+        <td>${fmt(sec.rMaxKm, 4)} Ω/km</td>
         <td>${sec.usage}</td>
         <td>
           <button type="button" class="btn-table" onclick="applySection(${sec.mm2})">
@@ -249,7 +262,7 @@ window.applySection = function (mm2) {
 };
 
 // ==========================================
-// MOTOR DE CÁLCULO Y DESARROLLO (3 DECIMALES)
+// MOTOR DE CÁLCULO Y DESARROLLO
 // ==========================================
 function calculateAndRender() {
   dom.errorBanner.classList.add("hidden");
@@ -287,7 +300,7 @@ function calculateAndRender() {
       return showError("Ingresa una potencia P válida mayor a cero.");
     }
     if (loadMode !== "current_only" && !(cosphi > 0 && cosphi <= 1)) {
-      return showError("El factor de potencia (cos φ) debe estar entre 0,01 y 1,00.");
+      return showError("El factor de potencia (cos φ) debe estar entre 0,01 y 1.");
     }
   }
   if (mode === "section" && !(vLossAllowed > 0)) {
@@ -510,7 +523,7 @@ function calculateAndRender() {
     dom.stepsContainer.innerHTML = steps.join("");
     renderTables(S_selected);
 
-    const isOk = dV_pct <= maxPct;
+    const isOk = roundHalfUp(dV_pct, 3) <= roundHalfUp(maxPct, 3);
     dom.verdictBanner.className = `verdict-box ${isOk ? "verdict-ok" : "verdict-fail"}`;
     dom.verdictBanner.innerHTML = isOk
       ? `<h4>CUMPLE CON EL LÍMITE NORMATIVO (${fmt(dV_pct, 3)}% ≤ ${fmt(maxPct, 3)}%)</h4>
@@ -597,13 +610,13 @@ function calculateAndRender() {
       </div>
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Sección Comercial RIC</div>
-        <div class="kpi-value">${fmt(S_com, 1)} mm²</div>
+        <div class="kpi-value">${fmt(S_com, 3)} mm²</div>
         <div class="kpi-sub">Tabla N°4.1 RIC N°04</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Caída Real (ΔV / ΔV%)</div>
         <div class="kpi-value">${fmt(dV_real, 3)} V (${fmt(dV_real_pct, 3)}%)</div>
-        <div class="kpi-sub">Con sección ${fmt(S_com, 1)} mm²</div>
+        <div class="kpi-sub">Con sección ${fmt(S_com, 3)} mm²</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">Resistencia Real (R)</div>
@@ -614,8 +627,8 @@ function calculateAndRender() {
 
     steps.push(`
       <div class="step-card">
-        <div class="step-title"><span class="step-badge">Paso ${stepNum++}</span> Verificación con sección comercial RIC (${fmt(S_com, 1)} mm²)</div>
-        <p class="step-desc">Seleccionamos la sección comercial milimétrica inmediatamente superior según Tabla N°4.1 del RIC N°04 (<strong>${fmt(S_com, 1)} mm²</strong>) y verificamos:</p>
+        <div class="step-title"><span class="step-badge">Paso ${stepNum++}</span> Verificación con sección comercial RIC (${fmt(S_com, 3)} mm²)</div>
+        <p class="step-desc">Seleccionamos la sección comercial milimétrica inmediatamente superior según Tabla N°4.1 del RIC N°04 (<strong>${fmt(S_com, 3)} mm²</strong>) y verificamos:</p>
         ${renderDropMath(S_com, dV_real)}
         <div class="math-block">
           <span>ΔV%<sub>real</sub> =</span>
@@ -631,8 +644,8 @@ function calculateAndRender() {
     renderTables(S_com);
 
     dom.verdictBanner.className = "verdict-box verdict-ok";
-    dom.verdictBanner.innerHTML = `<h4>SECCIÓN COMERCIAL SELECCIONADA: ${fmt(S_com, 1)} mm²</h4>
-      <p>Verifica en la <strong>Tabla 1 (RIC N°04 Punto 5.4)</strong> la sección mínima exigida según el tipo de circuito (1,5 mm² iluminación, 2,5 mm² enchufes, 4,0 mm² alimentadores).</p>`;
+    dom.verdictBanner.innerHTML = `<h4>SECCIÓN COMERCIAL SELECCIONADA: ${fmt(S_com, 3)} mm²</h4>
+      <p>Verifica en la <strong>Tabla 1 (RIC N°04 Punto 5.4)</strong> la sección mínima exigida según el tipo de circuito (1,5 mm² iluminación, 2,5 mm² enchufes, 4 mm² alimentadores).</p>`;
   }
 
   // ==========================================
@@ -722,14 +735,14 @@ dom.sectionInput.addEventListener("input", () => {
 dom.rhoInput.addEventListener("input", () => {
   dom.materialPreset.value = "custom";
   const r = parseFloat(dom.rhoInput.value);
-  if (r > 0) dom.gammaInput.value = Number((1 / r).toFixed(3));
+  if (r > 0) dom.gammaInput.value = roundHalfUp(1 / r, 3);
   calculateAndRender();
 });
 
 dom.gammaInput.addEventListener("input", () => {
   dom.materialPreset.value = "custom";
   const g = parseFloat(dom.gammaInput.value);
-  if (g > 0) dom.rhoInput.value = Number((1 / g).toFixed(4));
+  if (g > 0) dom.rhoInput.value = roundHalfUp(1 / g, 4);
   calculateAndRender();
 });
 
