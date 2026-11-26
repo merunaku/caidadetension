@@ -99,7 +99,9 @@ function frac(numHtml, denHtml) {
 // ==========================================
 const dom = {
   form: document.getElementById("calcForm"),
+  modeTabs: document.querySelectorAll(".mode-tab"),
   calcMode: document.getElementById("calcMode"),
+  sectionMethod: document.getElementById("sectionMethod"),
   conductorCount: document.getElementById("conductorCount"),
   propMode: document.getElementById("propMode"),
   voltageInput: document.getElementById("voltageInput"),
@@ -115,16 +117,23 @@ const dom = {
   gammaInput: document.getElementById("gammaInput"),
   sectionInput: document.getElementById("sectionInput"),
   sectionQuickSelect: document.getElementById("sectionQuickSelect"),
+  targetRInput: document.getElementById("targetRInput"),
   vLossInput: document.getElementById("vLossInput"),
   maxDropInput: document.getElementById("maxDropInput"),
 
+  groupSectionMethod: document.getElementById("groupSectionMethod"),
+  groupVoltage: document.getElementById("groupVoltage"),
   groupCurrent: document.getElementById("groupCurrent"),
   groupPower: document.getElementById("groupPower"),
   groupCosphi: document.getElementById("groupCosphi"),
+  bottomDividerLabel: document.getElementById("bottomDividerLabel"),
   groupSection: document.getElementById("groupSection"),
+  groupTargetR: document.getElementById("groupTargetR"),
+  groupDropLimitsRow: document.getElementById("groupDropLimitsRow"),
   groupVLoss: document.getElementById("groupVLoss"),
   groupMaxPct: document.getElementById("groupMaxPct"),
 
+  resultsHeading: document.getElementById("resultsHeading"),
   errorBanner: document.getElementById("errorBanner"),
   kpiGrid: document.getElementById("kpiGrid"),
   verdictBanner: document.getElementById("verdictBanner"),
@@ -137,8 +146,17 @@ const dom = {
 };
 
 // ==========================================
-// SINCRONIZACIÓN DE CONTROLES
+// SINCRONIZACIÓN DE CONTROLES Y PESTAÑAS
 // ==========================================
+function setActiveMode(mode) {
+  dom.calcMode.value = mode;
+  dom.modeTabs.forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.mode === mode);
+  });
+  updateFormVisibility();
+  calculateAndRender();
+}
+
 function syncVLossFromPct() {
   const V = parseFloat(dom.voltageInput.value);
   const pct = parseFloat(dom.maxDropInput.value);
@@ -157,27 +175,51 @@ function syncPctFromVLoss() {
 
 function updateFormVisibility() {
   const mode = dom.calcMode.value;
+  const secMethod = dom.sectionMethod.value;
   const loadMode = dom.loadMode.value;
 
+  // Reset visibilidades
+  dom.groupSectionMethod.classList.add("hidden");
+  dom.groupVoltage.classList.remove("hidden");
+  dom.loadSectionGroup.classList.remove("hidden");
+  dom.groupSection.classList.add("hidden");
+  dom.groupTargetR.classList.add("hidden");
+  dom.groupDropLimitsRow.classList.remove("hidden");
+  dom.groupVLoss.classList.add("hidden");
+  dom.groupMaxPct.classList.add("hidden");
+
   if (mode === "drop") {
+    dom.resultsHeading.textContent = "2. Resultados — Caída de Tensión (ΔV)";
+    dom.bottomDividerLabel.textContent = "Sección y Límite RIC N°03";
     dom.groupSection.classList.remove("hidden");
-    dom.groupVLoss.classList.add("hidden");
     dom.groupMaxPct.classList.remove("hidden");
   } else if (mode === "section") {
-    dom.groupSection.classList.add("hidden");
-    dom.groupVLoss.classList.remove("hidden");
-    dom.groupMaxPct.classList.remove("hidden");
-    syncVLossFromPct();
+    dom.resultsHeading.textContent = "2. Resultados — Sección del Conductor (S)";
+    dom.groupSectionMethod.classList.remove("hidden");
+
+    if (secMethod === "by_vloss") {
+      dom.bottomDividerLabel.textContent = "Caída de Tensión Máxima Admisible";
+      dom.groupVLoss.classList.remove("hidden");
+      dom.groupMaxPct.classList.remove("hidden");
+      syncVLossFromPct();
+    } else {
+      dom.bottomDividerLabel.textContent = "Resistencia Objetivo del Conductor";
+      dom.groupVoltage.classList.add("hidden");
+      dom.loadSectionGroup.classList.add("hidden");
+      dom.groupDropLimitsRow.classList.add("hidden");
+      dom.groupTargetR.classList.remove("hidden");
+    }
   } else if (mode === "resistance") {
+    dom.resultsHeading.textContent = "2. Resultados — Resistencia del Conductor (R)";
+    dom.bottomDividerLabel.textContent = "Sección del Conductor";
+    dom.groupVoltage.classList.add("hidden");
+    dom.loadSectionGroup.classList.add("hidden");
+    dom.groupDropLimitsRow.classList.add("hidden");
     dom.groupSection.classList.remove("hidden");
-    dom.groupVLoss.classList.add("hidden");
-    dom.groupMaxPct.classList.add("hidden");
   }
 
-  if (mode === "resistance") {
-    dom.loadSectionGroup.classList.add("hidden");
-  } else {
-    dom.loadSectionGroup.classList.remove("hidden");
+  // Sub-campos de carga (Corriente / Potencia / cos φ)
+  if (!dom.loadSectionGroup.classList.contains("hidden")) {
     dom.groupCurrent.classList.add("hidden");
     dom.groupPower.classList.add("hidden");
     dom.groupCosphi.classList.add("hidden");
@@ -254,10 +296,10 @@ window.applySection = function (mm2) {
   dom.sectionInput.value = mm2;
   dom.sectionQuickSelect.value = mm2.toString();
   if (dom.calcMode.value === "section") {
-    dom.calcMode.value = "drop";
-    updateFormVisibility();
+    setActiveMode("drop");
+  } else {
+    calculateAndRender();
   }
-  calculateAndRender();
 };
 
 // ==========================================
@@ -267,6 +309,7 @@ function calculateAndRender() {
   dom.errorBanner.classList.add("hidden");
 
   const mode = dom.calcMode.value;
+  const secMethod = dom.sectionMethod.value;
   const condType = dom.conductorCount.value;
   const propMode = dom.propMode.value;
   const loadMode = dom.loadMode.value;
@@ -276,6 +319,7 @@ function calculateAndRender() {
   const rho = parseFloat(dom.rhoInput.value);
   const gamma = parseFloat(dom.gammaInput.value);
   const S_selected = parseFloat(dom.sectionInput.value);
+  const targetR = parseFloat(dom.targetRInput.value);
   const vLossAllowed = parseFloat(dom.vLossInput.value);
   const maxPct = parseFloat(dom.maxDropInput.value);
 
@@ -284,14 +328,17 @@ function calculateAndRender() {
   const pUnit = dom.powerUnit.value;
   const cosphi = parseFloat(dom.cosphiInput.value);
 
-  // Validaciones
-  if (!(V > 0 && L > 0 && rho > 0 && gamma > 0)) {
-    return showError("Verifica que tensión, largo, resistividad y conductividad sean mayores a cero.");
+  // Validaciones comunes
+  if (!(L > 0 && rho > 0 && gamma > 0)) {
+    return showError("Verifica que el largo, la resistividad y la conductividad sean mayores a cero.");
   }
-  if (mode !== "section" && !(S_selected > 0)) {
-    return showError("Ingresa una sección S válida mayor a cero (en mm²).");
-  }
-  if (mode !== "resistance") {
+
+  const needsElectricalLoad = mode === "drop" || (mode === "section" && secMethod === "by_vloss");
+
+  if (needsElectricalLoad) {
+    if (!(V > 0)) {
+      return showError("Ingresa una tensión V válida mayor a cero.");
+    }
     if (loadMode !== "power" && !(rawI > 0)) {
       return showError("Ingresa una corriente I válida mayor a cero.");
     }
@@ -302,8 +349,15 @@ function calculateAndRender() {
       return showError("El factor de potencia (cos φ) debe estar entre 0,01 y 1.");
     }
   }
-  if (mode === "section" && !(vLossAllowed > 0)) {
+
+  if ((mode === "drop" || mode === "resistance") && !(S_selected > 0)) {
+    return showError("Ingresa una sección S válida mayor a cero (en mm²).");
+  }
+  if (mode === "section" && secMethod === "by_vloss" && !(vLossAllowed > 0)) {
     return showError("Ingresa un voltaje de pérdida admisible mayor a cero.");
+  }
+  if (mode === "section" && secMethod === "by_resistance" && !(targetR > 0)) {
+    return showError("Ingresa una resistencia máxima R válida mayor a cero (en Ω).");
   }
 
   // Factor de conductores (1 conductor, 2 conductores o trifásico)
@@ -329,7 +383,7 @@ function calculateAndRender() {
   let P_watts = 0;
   const useCosphi = loadMode !== "current_only";
 
-  if (mode !== "resistance") {
+  if (needsElectricalLoad) {
     if (loadMode === "power") {
       P_watts = pUnit === "kW" ? rawP * 1000 : rawP;
       I = condType === "tri" ? P_watts / (Math.sqrt(3) * V * cosphi) : P_watts / (V * cosphi);
@@ -342,10 +396,10 @@ function calculateAndRender() {
   // Etiquetas de datos ingresados
   const tags = [
     `<li><strong>Conductores:</strong> ${condDesc}</li>`,
-    `<li><strong>Tensión (V):</strong> ${fmt(V)} V</li>`,
     `<li><strong>Largo (L):</strong> ${fmt(L)} m</li>`
   ];
-  if (mode !== "resistance") {
+  if (needsElectricalLoad) {
+    tags.push(`<li><strong>Tensión (V):</strong> ${fmt(V)} V</li>`);
     if (loadMode === "power") {
       tags.push(`<li><strong>Potencia (P):</strong> ${fmt(P_watts)} W</li>`);
     } else {
@@ -360,10 +414,12 @@ function calculateAndRender() {
   } else {
     tags.push(`<li><strong>Conductividad (γ):</strong> ${fmt(gamma)} m/(Ω·mm²)</li>`);
   }
-  if (mode !== "section") {
+  if (mode === "drop" || mode === "resistance") {
     tags.push(`<li><strong>Sección (S):</strong> ${fmt(S_selected)} mm²</li>`);
-  } else {
+  } else if (mode === "section" && secMethod === "by_vloss") {
     tags.push(`<li><strong>V<sub>pérdida</sub> admisible:</strong> ${fmt(vLossAllowed)} V (${fmt(maxPct)}%)</li>`);
+  } else if (mode === "section" && secMethod === "by_resistance") {
+    tags.push(`<li><strong>Resistencia máxima (R):</strong> ${fmt(targetR)} Ω</li>`);
   }
   dom.dataList.innerHTML = tags.join("");
 
@@ -371,7 +427,7 @@ function calculateAndRender() {
   let stepNum = 1;
 
   // Paso previo si el dato fue Potencia
-  if (mode !== "resistance" && loadMode === "power") {
+  if (needsElectricalLoad && loadMode === "power") {
     const denF = condType === "tri" ? "√3 · V · cos φ" : "V · cos φ";
     const denV = condType === "tri"
       ? `1,732 · ${fmt(V)} · ${fmt(cosphi)}`
@@ -464,7 +520,6 @@ function calculateAndRender() {
     const dV_pct = (dV / V) * 100;
     const V_load = V - dV;
 
-    // KPIs
     dom.kpiGrid.innerHTML = `
       <div class="kpi-card kpi-highlight">
         <div class="kpi-label">Caída de Tensión (ΔV)</div>
@@ -488,7 +543,6 @@ function calculateAndRender() {
       </div>
     `;
 
-    // Pasos
     steps.push(`
       <div class="step-card">
         <div class="step-title"><span class="step-badge">Paso ${stepNum++}</span> Cálculo de la caída de tensión (ΔV)</div>
@@ -528,13 +582,13 @@ function calculateAndRender() {
       ? `<h4>CUMPLE CON EL LÍMITE NORMATIVO (${fmt(dV_pct)}% ≤ ${fmt(maxPct)}%)</h4>
          <p>La caída de tensión es de <strong>${fmt(dV)} V (${fmt(dV_pct)}%)</strong> con conductor de <strong>${fmt(S_selected)} mm²</strong> (R = ${fmt(R)} Ω).</p>`
       : `<h4>EXCEDE EL LÍMITE NORMATIVO (${fmt(dV_pct)}% > ${fmt(maxPct)}%)</h4>
-         <p>La caída de tensión es de <strong>${fmt(dV)} V (${fmt(dV_pct)}%)</strong>. Cambia a la opción <strong>"2. Sección mínima"</strong> para determinar el calibre adecuado.</p>`;
+         <p>La caída de tensión es de <strong>${fmt(dV)} V (${fmt(dV_pct)}%)</strong>. Haz clic arriba en <strong>"2. Sección del Conductor (S)"</strong> para calcular el calibre adecuado.</p>`;
   }
 
   // ==========================================
-  // MODO 2: SECCIÓN MÍNIMA S = (k · L · ρ · I) / V_pérdida
+  // MODO 2A: SECCIÓN DEL CONDUCTOR POR CAÍDA DE TENSIÓN
   // ==========================================
-  if (mode === "section") {
+  if (mode === "section" && secMethod === "by_vloss") {
     const S_calc = propMode === "rho"
       ? (k * L * rho * I_eff) / vLossAllowed
       : (k * L * I_eff) / (gamma * vLossAllowed);
@@ -603,7 +657,7 @@ function calculateAndRender() {
 
     dom.kpiGrid.innerHTML = `
       <div class="kpi-card kpi-highlight">
-        <div class="kpi-label">Sección Calculada</div>
+        <div class="kpi-label">Sección Calculada (S)</div>
         <div class="kpi-value">${fmt(S_calc)} mm²</div>
         <div class="kpi-sub">Valor teórico mínimo</div>
       </div>
@@ -645,6 +699,100 @@ function calculateAndRender() {
     dom.verdictBanner.className = "verdict-box verdict-ok";
     dom.verdictBanner.innerHTML = `<h4>SECCIÓN COMERCIAL SELECCIONADA: ${fmt(S_com)} mm²</h4>
       <p>Verifica en la <strong>Tabla 1 (RIC N°04 Punto 5.4)</strong> la sección mínima exigida según el tipo de circuito (1,5 mm² iluminación, 2,5 mm² enchufes, 4 mm² alimentadores).</p>`;
+  }
+
+  // ==========================================
+  // MODO 2B: SECCIÓN DEL CONDUCTOR POR RESISTENCIA MÁXIMA (R)
+  // ==========================================
+  if (mode === "section" && secMethod === "by_resistance") {
+    const S_calc = propMode === "rho"
+      ? (k * L * rho) / targetR
+      : (k * L) / (gamma * targetR);
+
+    const chosenObj = RIC_SECTIONS_TABLE_4_1.find((sec) => sec.mm2 >= S_calc);
+
+    const secMathHtml = propMode === "rho"
+      ? `
+        <div class="math-block">
+          <span>S =</span>
+          ${frac(`${kFormula} · L · ρ`, "R")}
+          <span>=</span>
+          ${frac(`${kNumeric} · ${fmt(L)} · ${fmt(rho, 4)}`, `${fmt(targetR)}`)}
+          <span>=</span>
+          <span class="math-result">${fmt(S_calc)} mm²</span>
+        </div>
+      `
+      : `
+        <div class="math-block">
+          <span>S =</span>
+          ${frac(`${kFormula} · L`, "γ · R")}
+          <span>=</span>
+          ${frac(`${kNumeric} · ${fmt(L)}`, `${fmt(gamma)} · ${fmt(targetR)}`)}
+          <span>=</span>
+          <span class="math-result">${fmt(S_calc)} mm²</span>
+        </div>
+      `;
+
+    steps.push(`
+      <div class="step-card">
+        <div class="step-title"><span class="step-badge">Paso 1</span> Cálculo de la sección mínima por resistencia (S)</div>
+        <p class="step-desc">Despejando la sección desde la ley de Pouillet (<strong>R = ${fmt(targetR)} Ω</strong>):</p>
+        ${secMathHtml}
+      </div>
+    `);
+
+    if (!chosenObj) {
+      dom.kpiGrid.innerHTML = `
+        <div class="kpi-card kpi-highlight">
+          <div class="kpi-label">Sección Calculada (S)</div>
+          <div class="kpi-value">${fmt(S_calc)} mm²</div>
+          <div class="kpi-sub">Supera 240 mm²</div>
+        </div>
+      `;
+      dom.stepsContainer.innerHTML = steps.join("");
+      renderTables(null);
+      dom.verdictBanner.className = "verdict-box verdict-fail";
+      dom.verdictBanner.innerHTML = `<h4>SECCIÓN SUPERA EL CALIBRE ÚNICO MÁXIMO (240 mm²)</h4>
+        <p>Se requiere dividir el circuito o instalar conductores en paralelo.</p>`;
+      return;
+    }
+
+    const S_com = chosenObj.mm2;
+    const R_real = propMode === "rho"
+      ? (k * L * rho) / S_com
+      : (k * L) / (gamma * S_com);
+
+    dom.kpiGrid.innerHTML = `
+      <div class="kpi-card kpi-highlight">
+        <div class="kpi-label">Sección Calculada (S)</div>
+        <div class="kpi-value">${fmt(S_calc)} mm²</div>
+        <div class="kpi-sub">Para R ≤ ${fmt(targetR)} Ω</div>
+      </div>
+      <div class="kpi-card kpi-highlight">
+        <div class="kpi-label">Sección Comercial RIC</div>
+        <div class="kpi-value">${fmt(S_com)} mm²</div>
+        <div class="kpi-sub">Tabla N°4.1 RIC N°04</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Resistencia Real (R)</div>
+        <div class="kpi-value">${fmt(R_real)} Ω</div>
+        <div class="kpi-sub">Con sección ${fmt(S_com)} mm²</div>
+      </div>
+    `;
+
+    steps.push(`
+      <div class="step-card">
+        <div class="step-title"><span class="step-badge">Paso 2</span> Verificación de resistencia con sección comercial (${fmt(S_com)} mm²)</div>
+        ${renderResistanceMath(S_com, R_real)}
+      </div>
+    `);
+
+    dom.stepsContainer.innerHTML = steps.join("");
+    renderTables(S_com);
+
+    dom.verdictBanner.className = "verdict-box verdict-ok";
+    dom.verdictBanner.innerHTML = `<h4>SECCIÓN COMERCIAL RECOMENDADA: ${fmt(S_com)} mm²</h4>
+      <p>Con <strong>${fmt(S_com)} mm²</strong> la resistencia real es de <strong>${fmt(R_real)} Ω</strong> (inferior al límite de ${fmt(targetR)} Ω).</p>`;
   }
 
   // ==========================================
@@ -700,7 +848,15 @@ function showError(msg) {
 // ==========================================
 // EVENTOS E INICIALIZACIÓN
 // ==========================================
+dom.modeTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setActiveMode(tab.dataset.mode));
+});
+
 dom.calcMode.addEventListener("change", () => {
+  setActiveMode(dom.calcMode.value);
+});
+
+dom.sectionMethod.addEventListener("change", () => {
   updateFormVisibility();
   calculateAndRender();
 });
@@ -763,7 +919,8 @@ dom.vLossInput.addEventListener("input", () => {
   dom.currentInput,
   dom.powerInput,
   dom.powerUnit,
-  dom.cosphiInput
+  dom.cosphiInput,
+  dom.targetRInput
 ].forEach((el) => {
   el.addEventListener("input", calculateAndRender);
   el.addEventListener("change", calculateAndRender);
@@ -791,7 +948,6 @@ document.querySelectorAll("[data-dv]").forEach((btn) => {
 });
 
 dom.btnReset.addEventListener("click", () => {
-  dom.calcMode.value = "drop";
   dom.conductorCount.value = "2";
   dom.propMode.value = "rho";
   dom.voltageInput.value = "220";
@@ -801,8 +957,10 @@ dom.btnReset.addEventListener("click", () => {
   dom.materialPreset.value = "cu20_iec";
   dom.sectionInput.value = "4";
   dom.sectionQuickSelect.value = "4";
+  dom.targetRInput.value = "0.3";
   dom.maxDropInput.value = "3";
-  updateFormVisibility();
+  dom.sectionMethod.value = "by_vloss";
+  setActiveMode("drop");
   syncVLossFromPct();
   handleMaterialChange();
 });

@@ -33,6 +33,33 @@
       </div>
     </div>
 
+    <!-- SELECTOR PRINCIPAL VISIBLE DE MODO DE CÁLCULO -->
+    <div class="mode-switcher" role="tablist" aria-label="Seleccionar tipo de cálculo">
+      <button type="button" class="mode-tab active" data-mode="drop">
+        <span class="tab-icon">⚡</span>
+        <span class="tab-text">
+          <strong>1. Caída de Tensión (ΔV)</strong>
+          <small>Calcular pérdida en Volt y %</small>
+        </span>
+      </button>
+
+      <button type="button" class="mode-tab" data-mode="section">
+        <span class="tab-icon">📐</span>
+        <span class="tab-text">
+          <strong>2. Sección del Conductor (S)</strong>
+          <small>Dimensionar calibre en mm²</small>
+        </span>
+      </button>
+
+      <button type="button" class="mode-tab" data-mode="resistance">
+        <span class="tab-icon">🔌</span>
+        <span class="tab-text">
+          <strong>3. Resistencia (R)</strong>
+          <small>Calcular resistencia en Ω</small>
+        </span>
+      </button>
+    </div>
+
     <div class="calc-layout">
       <!-- COLUMNA IZQUIERDA: INGRESO DE DATOS -->
       <aside class="card calc-card config-panel">
@@ -42,13 +69,22 @@
         </div>
 
         <form id="calcForm" class="form-stack">
-          <!-- Qué calcular -->
+          <!-- Selector sincronizado con las pestañas superiores -->
           <div class="form-group highlight-box">
-            <label for="calcMode">¿Qué deseas calcular?</label>
+            <label for="calcMode">Fórmula seleccionada</label>
             <select id="calcMode" class="form-control">
-              <option value="drop" selected>1. Caída de tensión: ΔV = (k · L · ρ · I) / S</option>
-              <option value="section">2. Sección mínima: S = (k · L · ρ · I) / V_pérdida</option>
-              <option value="resistance">3. Resistencia del conductor: R = (k · L · ρ) / S</option>
+              <option value="drop" selected>Caída de tensión: ΔV = (k · L · ρ · I) / S</option>
+              <option value="section">Sección del conductor: S = (k · L · ρ · I) / V_pérdida</option>
+              <option value="resistance">Resistencia del conductor: R = (k · L · ρ) / S</option>
+            </select>
+          </div>
+
+          <!-- Sub-modo exclusivo cuando se calcula SECCIÓN DEL CONDUCTOR -->
+          <div class="form-group highlight-box hidden" id="groupSectionMethod">
+            <label for="sectionMethod">¿A partir de qué dato calcular la sección S?</label>
+            <select id="sectionMethod" class="form-control">
+              <option value="by_vloss" selected>1. Por caída de tensión admisible (V_pérdida o ΔV%)</option>
+              <option value="by_resistance">2. Por resistencia máxima del conductor (R en Ω)</option>
             </select>
           </div>
 
@@ -74,7 +110,7 @@
 
           <!-- Tensión y Largo -->
           <div class="form-row">
-            <div class="form-group">
+            <div class="form-group" id="groupVoltage">
               <label for="voltageInput">Tensión V (Volt)</label>
               <input type="number" id="voltageInput" class="form-control" value="220" min="0.1" step="any" required />
               <div class="quick-pills">
@@ -136,7 +172,7 @@
               <option value="cu20_trad">Cobre 20 °C — Redondeo clásico (ρ = 0,018)</option>
               <option value="cu70">Cobre en servicio PVC 70 °C (ρ = 0,0214)</option>
               <option value="cu90">Cobre en servicio XLPE 90 °C (ρ = 0,0228)</option>
-              <option value="al20">Aluminio 20 °C (ρ = 0,028)</option>
+              <option value="al20">Aluminio estándar (ρ = 0,028)</option>
               <option value="al70">Aluminio en servicio PVC 70 °C (ρ = 0,034)</option>
               <option value="custom">Personalizado (editar abajo)</option>
             </select>
@@ -154,8 +190,8 @@
             </div>
           </div>
 
-          <!-- Sección y Voltaje de pérdida -->
-          <div class="section-divider"><span>Sección y Límite RIC N°03</span></div>
+          <!-- Sección, Resistencia objetivo y Voltaje de pérdida -->
+          <div class="section-divider"><span id="bottomDividerLabel">Sección y Límite RIC N°03</span></div>
 
           <div class="form-group" id="groupSection">
             <label for="sectionInput">Sección del conductor S (mm²)</label>
@@ -183,7 +219,13 @@
             <span class="field-hint">Escribe cualquier calibre en mm² o selecciona uno normalizado.</span>
           </div>
 
-          <div class="form-row">
+          <div class="form-group hidden" id="groupTargetR">
+            <label for="targetRInput">Resistencia máxima del conductor R (Ω)</label>
+            <input type="number" id="targetRInput" class="form-control" value="0.3" min="0.0001" step="any" />
+            <span class="field-hint">Fórmula: S = (k · L · ρ) / R</span>
+          </div>
+
+          <div class="form-row" id="groupDropLimitsRow">
             <div class="form-group hidden" id="groupVLoss">
               <label for="vLossInput">Voltaje pérdida V<sub>pérdida</sub> (V)</label>
               <input type="number" id="vLossInput" class="form-control" value="6.6" min="0.001" step="any" />
@@ -210,7 +252,7 @@
         <!-- RESUMEN DE RESULTADOS -->
         <article class="card calc-card">
           <div class="card-title-row">
-            <h2>2. Resultados Obtenidos</h2>
+            <h2 id="resultsHeading">2. Resultados Obtenidos</h2>
           </div>
 
           <div id="errorBanner" class="error-banner hidden"></div>
